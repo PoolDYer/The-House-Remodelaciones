@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String    // bcrypt hash
+  name            String
+  role            String    @default("admin")
+  
+  refreshTokens   RefreshToken[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([email])
+}
+
+model RefreshToken {
+  id              String    @id @default(cuid())
+  token           String    @unique
+  adminId         String
+  admin           Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime
+  revoked         Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([adminId])
+}
+
+model Categoria {
+  id              String    @id @default(cuid())
+  nombre          String    @unique
+  slug            String    @unique
+  descripcion     String?
+  imagen          String?   // URL to image
+  
+  productos       Producto[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Producto {
+  id              String    @id @default(cuid())
+  nombre          String
+  slug            String    @unique
+  descripcion     String
+  precio          String
+  especificaciones String?  // JSON stored as string
+  stock           Int       @default(0)
+  
+  categoriaId     String
+  categoria       Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  
+  imagenes        Imagen[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([categoriaId])
+  @@index([slug])
+}
+
+model Imagen {
+  id              String    @id @default(cuid())
+  url             String
+  productoId      String
+  producto        Producto  @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+}
+
+model CategoriaColor {
+  id              String    @id @default(cuid())
+  nombre          String    @unique
+  slug            String    @unique
+  descripcion     String?
+  imagen          String?   // URL to image
+  
+  colores         Color[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Color {
+  id              String    @id @default(cuid())
+  nombre          String
+  slug            String    @unique
+  descripcion     String?
+  especificaciones String?   // JSON stored as string
+  imagenColor     String?   // URL to color image (1x1)
+  imagenReferencia String?   // URL to reference image
+  
+  categoriColorId String
+  categoriaColor  CategoriaColor @relation(fields: [categoriColorId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([categoriColorId])
+  @@index([slug])
+}
