@@ -20,6 +20,5 @@ yarn-error.log*
 coverage/
 .nyc_output/
 public/uploads/
-public/videos/
 db.sqlite
 db.sqlite-journal
