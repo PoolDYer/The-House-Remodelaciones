@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminFromToken } from "@/lib/permissions";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { v2 as cloudinary } from "cloudinary";
 
-const UPLOADS_DIR = join(process.cwd(), "public/uploads");
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request: NextRequest) {
@@ -44,33 +47,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure uploads directory exists
-    if (!existsSync(UPLOADS_DIR)) {
-      await mkdir(UPLOADS_DIR, { recursive: true });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 15);
-    const ext = file.name.split(".").pop();
-    const filename = `${timestamp}-${random}.${ext}`;
-
-    // Read file buffer
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Write file
-    const filepath = join(UPLOADS_DIR, filename);
-    await writeFile(filepath, buffer);
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "thehouse",
+          resource_type: "auto",
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
 
-    // Return public URL
-    const publicUrl = `/uploads/${filename}`;
+      uploadStream.end(buffer);
+    }) as any;
 
     return NextResponse.json(
       {
         success: true,
-        filename,
-        url: publicUrl,
+        filename: result.public_id,
+        url: result.secure_url,
       },
       { status: 200 }
     );
