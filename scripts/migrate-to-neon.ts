@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 const prismaNeon = new PrismaClient();
 
 // Conectar a SQLite local
-const sqliteDb = new Database("./prisma/dev.db");
+const sqliteDb = new Database("./prisma/prisma/dev.db");
 
 async function migrate() {
   try {
