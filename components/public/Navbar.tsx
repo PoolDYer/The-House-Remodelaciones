@@ -43,42 +43,47 @@ export const Navbar = () => {
           {/* Desktop Menu */}
           <div className="hidden md:flex gap-4 items-center">
             <Link
-              href="/muebles-melamine"
-              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${
-                isActive("/muebles-melamine")
+              href="/conocenos"
+              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${isActive("/conocenos")
                   ? "bg-gray-400 text-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
-              Muebles de Melamine
+              Conócenos
+            </Link>
+            <Link
+              href="/muebles-empotrados"
+              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${isActive("/muebles-empotrados")
+                  ? "bg-gray-400 text-black"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+            >
+              Muebles Empotrados
             </Link>
             <Link
               href="/muebles-venta"
-              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${
-                isActive("/muebles-venta")
+              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${isActive("/muebles-venta")
                   ? "bg-gray-400 text-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               Muebles en Venta
             </Link>
             <Link
               href="/colores-melamine"
-              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${
-                isActive("/colores-melamine")
+              className={`px-4 py-2 font-medium text-sm rounded-lg border border-black transition-colors duration-200 ${isActive("/colores-melamine")
                   ? "bg-gray-400 text-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               Colores
             </Link>
             <Link
               href="/admin-login"
-              className={`px-6 py-2.5 rounded-lg font-semibold text-sm border border-black transition-all duration-300 hover:shadow-lg ${
-                isActive("/admin-login")
+              className={`px-6 py-2.5 rounded-lg font-semibold text-sm border border-black transition-all duration-300 hover:shadow-lg ${isActive("/admin-login")
                   ? "bg-gray-400 text-black"
                   : "bg-primary text-black hover:bg-gray-300"
-              }`}
+                }`}
             >
               ¿Eres administrador?
             </Link>
@@ -98,42 +103,47 @@ export const Navbar = () => {
         {isOpen && (
           <div className="md:hidden pb-4 space-y-2 border-t border-gray-200/50">
             <Link
-              href="/muebles-melamine"
-              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${
-                isActive("/muebles-melamine")
+              href="/conocenos"
+              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${isActive("/conocenos")
                   ? "bg-gray-400 text-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
-              Muebles de Melamine
+              Conócenos
+            </Link>
+            <Link
+              href="/muebles-empotrados"
+              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${isActive("/muebles-empotrados")
+                  ? "bg-gray-400 text-black"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+            >
+              Muebles Empotrados
             </Link>
             <Link
               href="/muebles-venta"
-              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${
-                isActive("/muebles-venta")
+              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${isActive("/muebles-venta")
                   ? "bg-gray-400 text-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               Muebles en Venta
             </Link>
             <Link
               href="/colores-melamine"
-              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${
-                isActive("/colores-melamine")
+              className={`block px-4 py-2.5 font-medium rounded-lg border border-black transition-colors ${isActive("/colores-melamine")
                   ? "bg-gray-400 text-black"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               Colores
             </Link>
             <Link
               href="/admin-login"
-              className={`block px-4 py-2.5 rounded-lg font-semibold text-center border border-black transition-all ${
-                isActive("/admin-login")
+              className={`block px-4 py-2.5 rounded-lg font-semibold text-center border border-black transition-all ${isActive("/admin-login")
                   ? "bg-gray-400 text-black"
                   : "bg-primary text-black hover:bg-gray-300"
-              }`}
+                }`}
             >
               ¿Eres administrador?
             </Link>

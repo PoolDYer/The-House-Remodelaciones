@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Alert";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
 
 interface Color {
@@ -106,7 +106,8 @@ export default function ColoresPage() {
         <h1 className="text-3xl font-bold">Gestionar Colores</h1>
         <Link href="/dashboard/admin/colores/crear">
           <Button className="flex items-center gap-2 !bg-white !text-black border border-black hover:!bg-black hover:!text-white hover:border-white">
-            + Crear Nuevo Color
+            <Plus size={20} />
+            Crear Nuevo Color
           </Button>
         </Link>
       </div>

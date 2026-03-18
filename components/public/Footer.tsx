@@ -41,13 +41,13 @@ export const Footer = () => {
             <h4 className="font-bold mb-4">Empresa</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
               <li>
-                <a href="#" className="hover:text-white transition-colors">
-                  About Us
+                <a href="/conocenos" className="hover:text-white transition-colors">
+                  Conócenos
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition-colors">
-                  Contact
+                  Contáctanos
                 </a>
               </li>
               <li>
@@ -63,8 +63,8 @@ export const Footer = () => {
             <h4 className="font-bold mb-4">Contacto</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
               <li>Email: info@melamine.co</li>
-              <li>Phone: +57 1 234 5678</li>
-              <li>Address: Calle 123, Bogotá</li>
+              <li>Telefono: +51 995 718 104</li>
+              <li>Dirección: Av Ramón Castilla N⁰ 598</li>
             </ul>
           </div>
         </div>

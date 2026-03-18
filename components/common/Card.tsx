@@ -7,7 +7,7 @@ interface CardProps {
   children: React.ReactNode;
 }
 
-export const Card: React.FC<CardProps> = ({ className = "", children }) => {
+const CardComponent: React.FC<CardProps> = ({ className = "", children }) => {
   return (
     <div
       className={`bg-white rounded-lg shadow-md p-6 border border-gray-200 ${className}`}
@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({ className = "", children }) => {
   );
 };
 
-export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   className = "",
   children,
   ...props
@@ -27,7 +27,7 @@ export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   </div>
 );
 
-export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
+const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
   className = "",
   children,
   ...props
@@ -37,7 +37,7 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
   </h2>
 );
 
-export const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   className = "",
   children,
   ...props
@@ -47,7 +47,7 @@ export const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   </div>
 );
 
-export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   className = "",
   children,
   ...props
@@ -59,3 +59,13 @@ export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
     {children}
   </div>
 );
+
+// Attach sub-components to Card
+export const Card = Object.assign(CardComponent, {
+  Header: CardHeader,
+  Title: CardTitle,
+  Content: CardContent,
+  Footer: CardFooter,
+});
+
+export { CardHeader, CardTitle, CardContent, CardFooter };

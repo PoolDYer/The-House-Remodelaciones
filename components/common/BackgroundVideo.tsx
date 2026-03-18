@@ -7,6 +7,7 @@ export const BackgroundVideo = () => {
       muted
       loop
       playsInline
+      suppressHydrationWarning
       className="fixed top-0 left-0 w-full h-full object-cover -z-10"
       style={{
         filter: "brightness(0.7)",

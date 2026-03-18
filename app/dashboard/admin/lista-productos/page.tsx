@@ -1,229 +1,238 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/common/Card";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Alert";
-import { Edit2, Trash2, Eye } from "lucide-react";
-import Link from "next/link";
-
-interface Producto {
-  id: string;
-  nombre: string;
-  slug: string;
-  precio: string;
-  stock: number;
-  categoria: {
-    nombre: string;
-  };
-  createdAt: string;
-}
+import { Plus, Edit2, Trash2, Package } from "lucide-react";
 
 interface Categoria {
   id: string;
   nombre: string;
 }
 
+interface Producto {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string;
+  precio: string;
+  stock: number;
+  categoria: Categoria;
+  imagenes: { id: string; url: string }[];
+  createdAt: string;
+}
+
 export default function ListaProductosPage() {
+  const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filtroCategoria, setFiltroCategoria] = useState("");
 
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
 
-  const fetchData = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const [productsRes, categoriesRes] = await Promise.all([
+      const [prodRes, catRes] = await Promise.all([
         fetch("/api/productos"),
         fetch("/api/categorias"),
       ]);
-
-      const productsData = await productsRes.json();
-      const categoriesData = await categoriesRes.json();
-
-      setProductos(productsData.productos || []);
-      setCategorias(categoriesData.categorias || []);
+      const prodData = await prodRes.json();
+      const catData = await catRes.json();
+      setProductos(prodData.productos || []);
+      setCategorias(catData.categorias || []);
     } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Error al cargar los datos");
+      console.error("Error loading data:", err);
+      setError("Error al cargar datos");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este producto?")) {
-      return;
-    }
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
 
-    const performDelete = async () => {
-      try {
-        const response = await fetch(`/api/productos/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          setError(data.message);
-          return;
-        }
-
-        fetchData();
-      } catch (err) {
-        setError("Error al eliminar producto");
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        router.push("/admin-login");
+        return;
       }
-    };
 
-    performDelete();
+      const response = await fetch(`/api/productos/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message);
+        return;
+      }
+
+      loadData();
+    } catch (err) {
+      setError("Error al eliminar producto");
+    }
   };
 
-  const filteredProductos = selectedCategory
-    ? productos.filter((p) => p.categoria.nombre === selectedCategory)
+  const filteredProductos = filtroCategoria
+    ? productos.filter((p) => p.categoria.id === filtroCategoria)
     : productos;
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Lista de Productos</h1>
+        <h1 className="text-3xl font-bold">Muebles en Venta</h1>
         <Link href="/dashboard/admin/productos/crear">
-          <Button>Crear Nuevo Producto</Button>
+          <Button className="flex items-center gap-2 !bg-white !text-black border border-black hover:!bg-black hover:!text-white hover:border-white">
+            <Plus size={20} />
+            Nuevo Producto
+          </Button>
         </Link>
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtrar por Categoría</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedCategory === null ? "primary" : "secondary"}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-            >
-              Todas ({productos.length})
-            </Button>
-            {categorias.map((cat) => (
-              <Button
-                key={cat.id}
-                variant={selectedCategory === cat.nombre ? "primary" : "secondary"}
-                size="sm"
-                onClick={() => setSelectedCategory(cat.nombre)}
-              >
-                {cat.nombre} (
-                {productos.filter((p) => p.categoria.nombre === cat.nombre)
-                  .length}
-                )
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filter */}
+      <div className="flex items-center gap-4">
+        <label className="text-sm font-medium text-gray-700">Filtrar por categoría:</label>
+        <select
+          value={filtroCategoria}
+          onChange={(e) => setFiltroCategoria(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+        >
+          <option value="">Todas</option>
+          {categorias.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.nombre}
+            </option>
+          ))}
+        </select>
+        <span className="text-sm text-gray-500">
+          {filteredProductos.length} producto{filteredProductos.length !== 1 ? "s" : ""}
+        </span>
+      </div>
 
-      {/* Products Table */}
       {loading ? (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando productos...</p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando productos...</p>
+        </div>
       ) : filteredProductos.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center text-gray-600">
-            {selectedCategory
-              ? `No hay productos en la categoría "${selectedCategory}"`
-              : "No hay productos creados"}
+            <Package size={48} className="mx-auto mb-4 text-gray-400" />
+            <p>No hay productos creados.</p>
+            <Link
+              href="/dashboard/admin/productos/crear"
+              className="text-primary font-semibold hover:underline mt-2 inline-block"
+            >
+              Crear tu primer producto →
+            </Link>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="pt-6 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">Nombre</th>
-                  <th className="text-left py-3 px-4 font-semibold">Categoría</th>
-                  <th className="text-left py-3 px-4 font-semibold">Fecha de Creación</th>
-                  <th className="text-left py-3 px-4 font-semibold">Precio</th>
-                  <th className="text-left py-3 px-4 font-semibold">Stock</th>
-                  <th className="text-left py-3 px-4 font-semibold">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProductos.map((producto) => (
-                  <tr key={producto.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{producto.nombre}</td>
-                    <td className="py-3 px-4 text-gray-600">
-                      <span className="bg-gray-200 px-2 py-1 rounded text-xs">
-                        {producto.categoria.nombre}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {formatDate(producto.createdAt)}
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-primary">
-                      ${producto.precio}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          producto.stock > 0
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {producto.stock}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Link href={`/dashboard/admin/productos/${producto.id}`}>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            title="Editar"
-                            className="p-2"
-                          >
-                            <Edit2 size={16} />
-                          </Button>
-                        </Link>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleDelete(producto.id)}
-                          title="Eliminar"
-                          className="p-2"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Imagen
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Nombre
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Categoría
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Precio
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Fecha
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredProductos.map((producto) => (
+                <tr key={producto.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    {producto.imagenes && producto.imagenes.length > 0 ? (
+                      <img
+                        src={producto.imagenes[0].url}
+                        alt={producto.nombre}
+                        className="w-16 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-16 h-12 bg-gray-200 rounded flex items-center justify-center">
+                        <Package size={20} className="text-gray-400" />
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-gray-900">{producto.nombre}</div>
+                    <div className="text-sm text-gray-500 line-clamp-1">{producto.descripcion}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                      {producto.categoria.nombre}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-semibold text-primary">
+                    S/ {producto.precio}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        producto.stock > 0
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {producto.stock}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {new Date(producto.createdAt).toLocaleDateString("es-PE")}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex gap-2 justify-end">
+                      <Link href={`/dashboard/admin/productos/${producto.id}`}>
+                        <Button size="sm" variant="secondary" className="flex items-center gap-1">
+                          <Edit2 size={14} />
+                          Editar
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDelete(producto.id)}
+                        className="flex items-center gap-1"
+                      >
+                        <Trash2 size={14} />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

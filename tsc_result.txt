@@ -1,0 +1,121 @@
+﻿
+> the-house-remodelaciones@1.0.0 build
+> next build
+
+node.exe : ÔÜá Warning: 
+Next.js inferred your 
+workspace root, but it 
+may not be correct.
+En línea: 1 Carácter: 1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (Ô  
+  Üá Warning: Ne...not    
+ be correct.:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+ We detected multiple 
+lockfiles and selected 
+the directory of C:\Users\
+tranp_3bhil36\package-lock
+.json as the root 
+directory.
+ To silence this warning, 
+set `turbopack.root` in 
+your Next.js config, or 
+consider removing one of 
+the lockfiles if it's not 
+needed.
+   See https://nextjs.org/
+docs/app/api-reference/con
+fig/next-config-js/turbopa
+ck#root-directory for 
+more information.
+ Detected additional 
+lockfiles: 
+   * C:\Users\tranp_3bhil3
+6\Desktop\thehouse\package
+-lock.json
+
+Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local, .env
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 5.3s
+  Running TypeScript ...
+  Collecting page data using 19 workers ...
+  Generating static pages using 19 workers (0/36) ...
+  Generating static pages using 19 workers (9/36) 
+  Generating static pages using 19 workers (18/36) 
+  Generating static pages using 19 workers (27/36) 
+Ô£ô Generating static pages using 19 workers (36/36) in 629.3ms
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /admin-login
+Ôö£ ãÆ /api/auth/check-admin
+Ôö£ ãÆ /api/auth/login
+Ôö£ ãÆ /api/auth/logout
+Ôö£ ãÆ /api/auth/me
+Ôö£ ãÆ /api/auth/register
+Ôö£ ãÆ /api/categorias
+Ôö£ ãÆ /api/categorias-colores
+Ôö£ ãÆ /api/categorias-colores/[id]
+Ôö£ ãÆ /api/categorias-muebles-empotrados
+Ôö£ ãÆ /api/categorias-muebles-empotrados/[id]
+Ôö£ ãÆ /api/categorias/[id]
+Ôö£ ãÆ /api/colores
+Ôö£ ãÆ /api/colores/[id]
+Ôö£ ãÆ /api/configuracion
+Ôö£ ãÆ /api/muebles-empotrados
+Ôö£ ãÆ /api/muebles-empotrados/[id]
+Ôö£ ãÆ /api/muebles-empotrados/[id]/imagenes
+Ôö£ ãÆ /api/presupuestos
+Ôö£ ãÆ /api/presupuestos/[id]
+Ôö£ ãÆ /api/presupuestos/[id]/export-pdf
+Ôö£ ãÆ /api/productos
+Ôö£ ãÆ /api/productos/[id]
+Ôö£ ãÆ /api/productos/[id]/imagenes
+Ôö£ ãÆ /api/productos/[id]/imagenes/[imgId]
+Ôö£ ãÆ /api/upload
+Ôö£ Ôùï /colores-melamine
+Ôö£ ãÆ /colores-melamine/[id]
+Ôö£ Ôùï /dashboard/admin
+Ôö£ Ôùï /dashboard/admin/categorias
+Ôö£ Ôùï /dashboard/admin/categorias-colores
+Ôö£ Ôùï /dashboard/admin/colores
+Ôö£ ãÆ /dashboard/admin/colores/[id]
+Ôö£ Ôùï /dashboard/admin/colores/crear
+Ôö£ Ôùï /dashboard/admin/configuracion
+Ôö£ Ôùï /dashboard/admin/lista-productos
+Ôö£ Ôùï /dashboard/admin/muebles-empotrados
+Ôö£ Ôùï /dashboard/admin/muebles-empotrados/categorias
+Ôö£ Ôùï /dashboard/admin/muebles-empotrados/productos
+Ôö£ ãÆ /dashboard/admin/muebles-empotrados/productos/[id]
+Ôö£ Ôùï /dashboard/admin/muebles-empotrados/productos/crear
+Ôö£ Ôùï /dashboard/admin/presupuestos
+Ôö£ ãÆ /dashboard/admin/presupuestos/[id]
+Ôö£ Ôùï /dashboard/admin/presupuestos/crear
+Ôö£ Ôùï /dashboard/admin/productos
+Ôö£ ãÆ /dashboard/admin/productos/[id]
+Ôö£ Ôùï /dashboard/admin/productos/crear
+Ôö£ Ôùï /muebles-empotrados
+Ôö£ ãÆ /muebles-empotrados/[id]
+Ôö£ Ôùï /muebles-venta
+Ôöö ãÆ /muebles-venta/[id]
+
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

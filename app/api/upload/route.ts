@@ -8,7 +8,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4"];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,17 +36,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { message: "Tipo de archivo no permitido. Use JPG, PNG o WebP" },
+        { message: "Tipo de archivo no permitido. Use JPG, PNG, WebP o MP4" },
         { status: 400 }
       );
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
+    // Validate file size (different limits for images vs videos)
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { message: "El archivo es demasiado grande. Máximo 5MB" },
+        { message: `El archivo es demasiado grande. Máximo ${isVideo ? "100MB" : "5MB"}` },
         { status: 400 }
       );
     }

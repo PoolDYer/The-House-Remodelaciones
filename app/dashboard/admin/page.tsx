@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card";
-import { Package, FolderOpen, Users } from "lucide-react";
+import { Package, FolderOpen, Users, Plus} from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboardPage() {
@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
             <Link
               href="/dashboard/admin/productos/crear"
               className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition-colors text-center font-medium border border-black"
-            >
+            >        
               Crear Nuevo Producto
             </Link>
             <Link

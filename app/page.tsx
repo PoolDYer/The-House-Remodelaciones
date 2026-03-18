@@ -52,7 +52,7 @@ export default function Home() {
               />
             </Link>
             <Link
-              href="/muebles-melamine"
+              href="/muebles-empotrados"
               className="inline-flex items-center justify-center px-8 sm:px-10 py-3 sm:py-4 bg-white/20 text-white border border-white/50 rounded-lg font-semibold hover:bg-white/30 transition-all hover:border-white backdrop-blur-sm"
             >
               Explorar Colecciones
@@ -157,7 +157,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             {/* Collection 1 */}
             <Link
-              href="/muebles-melamine"
+              href="/muebles-empotrados"
               className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm hover:bg-white/20 shadow-sm hover:shadow-2xl transition-all duration-300 border border-white/20"
             >
               <div className="aspect-video bg-gradient-to-br from-primary/30 to-primary-light/30 flex items-center justify-center">
@@ -165,7 +165,7 @@ export default function Home() {
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                  Muebles de Melamine
+                  Muebles Empotrados
                 </h3>
                 <p className="text-gray-200 text-sm mt-2">
                   Encuentra nuestro catálogo completo de muebles

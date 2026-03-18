@@ -10,9 +10,9 @@ export default function ProductosPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestionar Productos</h1>
         <Link href="/dashboard/admin/productos/crear">
-          <Button className="flex items-center gap-2">
-            <Plus size={20} />
-            Nuevo Producto
+          	<Button className="flex items-center gap-2 !bg-white !text-black border border-black hover:!bg-black hover:!text-white hover:border-white">
+              <Plus size={20} />      
+              Nuevo Producto
           </Button>
         </Link>
       </div>

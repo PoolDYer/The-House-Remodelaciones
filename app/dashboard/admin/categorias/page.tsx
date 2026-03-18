@@ -150,8 +150,8 @@ export default function CategoriasPage() {
             setEditingId(null);
             setFormData({ nombre: "", slug: "", descripcion: "" });
           }}
-          className="flex items-center gap-2 !bg-gray-200 !text-gray-900 border border-black hover:!bg-gray-300"
-        >
+        className="flex items-center gap-2 !bg-white !text-black border border-black hover:!bg-black hover:!text-white hover:border-white">
+        
           <Plus size={20} />
           Nueva Categoría
         </Button>

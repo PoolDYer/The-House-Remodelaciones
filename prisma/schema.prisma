@@ -18,6 +18,8 @@ model Admin {
   role            String    @default("admin")
   
   refreshTokens   RefreshToken[]
+  presupuestos    Presupuesto[]  @relation("AdminPresupuestos")
+  publicaciones   Publicacion[]
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -112,3 +114,140 @@ model Color {
   @@index([categoriColorId])
   @@index([slug])
 }
+
+model ConfiguracionEmpresa {
+  id              String    @id @default(cuid())
+  nombreEmpresa   String    @default("The House Remodelaciones")
+  ruc             String?
+  direccion       String?
+  telefono        String?
+  email           String?
+  website         String?
+  logo            String?   // URL to logo (default uses /logo.svg)
+  
+  updatedAt       DateTime  @updatedAt
+}
+
+model Presupuesto {
+  id              String    @id @default(cuid())
+  numero          String    @unique  // PRES-2025-001
+  estado          String    @default("borrador")  // borrador, enviado, aceptado, rechazado
+  
+  clienteNombre   String?
+  clienteRuc      String?
+  clienteDireccion String?
+  clienteTelefono String?
+  clienteEmail    String?
+  
+  fechaCreacion   DateTime  @default(now())
+  fechaValidez    DateTime?
+  
+  subtotal        Decimal   @db.Decimal(10, 2)
+  igvPorcentaje   Decimal   @default(18) @db.Decimal(5, 2)
+  igvMonto        Decimal   @default(0) @db.Decimal(10, 2)
+  descuentoTotal  Decimal   @default(0) @db.Decimal(10, 2)
+  total           Decimal   @db.Decimal(10, 2)
+  
+  notas           String?
+  
+  adminId         String
+  admin           Admin     @relation("AdminPresupuestos", fields: [adminId], references: [id], onDelete: Cascade)
+  
+  lineas          LineaPresupuesto[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([adminId])
+  @@index([numero])
+  @@index([estado])
+}
+
+model LineaPresupuesto {
+  id              String    @id @default(cuid())
+  numero          Int       // Line order (1, 2, 3...)
+  descripcion     String
+  cantidad        Decimal   @db.Decimal(10, 2)
+  precioUnitario  Decimal   @db.Decimal(10, 2)
+  descuento       Decimal   @default(0) @db.Decimal(10, 2)
+  subtotal        Decimal   @db.Decimal(10, 2)  // cantidad * precioUnitario - descuento
+  
+  presupuestoId   String
+  presupuesto     Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([presupuestoId])
+  @@unique([presupuestoId, numero])
+}
+
+model CategoriaMuebleEmpotrado {
+  id              String    @id @default(cuid())
+  nombre          String    @unique
+  slug            String    @unique
+  descripcion     String?
+  imagen          String?   // URL to image
+
+  muebles         MuebleEmpotrado[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model MuebleEmpotrado {
+  id              String    @id @default(cuid())
+  nombre          String
+  slug            String    @unique
+  descripcion     String
+  especificaciones String?  // JSON stored as string
+
+  categoriaId     String
+  categoria       CategoriaMuebleEmpotrado @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+
+  imagenes        ImagenMuebleEmpotrado[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([categoriaId])
+  @@index([slug])
+}
+
+model ImagenMuebleEmpotrado {
+  id              String    @id @default(cuid())
+  url             String
+  muebleId        String
+  mueble          MuebleEmpotrado @relation(fields: [muebleId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+}
+
+model Publicacion {
+  id              String    @id @default(cuid())
+  contenido       String
+
+  adminId         String
+  admin           Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  media           MediaPublicacion[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([adminId])
+}
+
+model MediaPublicacion {
+  id              String    @id @default(cuid())
+  url             String
+  tipo            String    // "imagen" | "video"
+
+  publicacionId   String
+  publicacion     Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime  @default(now())
+
+  @@index([publicacionId])
+}
+

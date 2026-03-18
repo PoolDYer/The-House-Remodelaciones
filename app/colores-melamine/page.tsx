@@ -63,7 +63,7 @@ export default function ColoresMelaminePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="section-title">Colores Disponibles en Melamine</h1>
+        <h1 className="section-title">Colores Disponibles de Muebles Empotrados</h1>
         <p className="section-subtitle">
           Explora nuestra amplia variedad de colores y acabados para tus muebles
         </p>
