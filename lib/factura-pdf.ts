@@ -1,13 +1,14 @@
 import jsPDF from "jspdf";
 import fs from "node:fs";
 import path from "node:path";
-import { calcularFactura, numeroFactura, type FacturaDatos } from "./facturacion";
+import { calcularFactura, importeEnLetras, nombreComprobante, numeroFactura, serieFactura, type FacturaDatos } from "./facturacion";
 
-export function generarFacturaPDF(datos: FacturaDatos, numero?: number): ArrayBuffer {
+export function generarFacturaPDF(datos: FacturaDatos, numero?: number, serie?: string | null, correlativo?: number | null): ArrayBuffer {
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const ink = "#17283F", textColor = "#252B33", muted = "#626A74", rule = "#CFD3D9";
   const left = 18, right = 192, width = right - left;
-  const referencia = numeroFactura(numero);
+  const referencia = numeroFactura(numero, serie ?? (numero ? undefined : serieFactura(datos.tipo)), correlativo);
+  const denominacion = nombreComprobante(datos.tipo);
   const totales = calcularFactura(datos);
   const money = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const date = (s: string) => s.split("-").reverse().join("/");
@@ -31,13 +32,14 @@ export function generarFacturaPDF(datos: FacturaDatos, numero?: number): ArrayBu
   }
   function continuation() {
     pdf.addPage();
-    text(datos.empresa.nombre.slice(0, 62), left, 18, 9, true, ink);
-    text(`${datos.tipo.toUpperCase()} / ${referencia}`, right, 18, 9, false, ink, "right");
-    line(23, ink, 0.35); y = 30;
+    const companyEnd = paragraph(datos.empresa.nombre, left, 18, 89, 8.5, true, ink);
+    text(denominacion.toUpperCase(), right, 18, 8, false, ink, "right");
+    text(referencia, right, 24, 9, true, ink, "right");
+    y = Math.max(companyEnd + 3, 29); line(y, ink, 0.35); y += 7;
   }
   function ensure(height: number) { if (y + height > 266) continuation(); }
 
-  pdf.setProperties({ title: `${datos.tipo} ${referencia}`, subject: `${datos.tipo} ${referencia}`, author: datos.empresa.nombre });
+  pdf.setProperties({ title: `${denominacion} ${referencia}`, subject: `${denominacion} ${referencia}`, author: datos.empresa.nombre });
   // Encabezado empresarial e identificación del comprobante.
   line(17, ink, 0.5);
   let companyX = left;
@@ -54,12 +56,13 @@ export function generarFacturaPDF(datos: FacturaDatos, numero?: number): ArrayBu
   if (datos.empresa.telefono) { text(`Tel. ${datos.empresa.telefono}`, companyX, companyY, 8, false, muted); companyY += 4.5; }
   if (datos.empresa.email) companyY = paragraph(datos.empresa.email, companyX, companyY, 81, 8, false, muted);
 
-  pdf.setDrawColor(ink); pdf.setLineWidth(0.35); pdf.rect(137, 23, 55, 35);
+  pdf.setDrawColor(ink); pdf.setLineWidth(0.35); pdf.rect(137, 23, 55, 42);
   text(datos.empresa.ruc ? `RUC ${datos.empresa.ruc}` : "COMPROBANTE", 164.5, 30, 9, true, ink, "center");
-  pdf.setFont("times", "normal"); pdf.setFontSize(21); pdf.setTextColor(ink);
-  pdf.text(datos.tipo.toUpperCase(), 164.5, 41, { align: "center" });
-  line(45, rule, 0.2, 137, 192);
-  text(referencia, 164.5, 53, 11, true, ink, "center");
+  pdf.setFont("times", "normal"); pdf.setFontSize(datos.tipo === "Factura" ? 21 : 14); pdf.setTextColor(ink);
+  pdf.text(datos.tipo === "Factura" ? "FACTURA" : "BOLETA DE VENTA", 164.5, 40, { align: "center" });
+  pdf.setFontSize(14); pdf.text("ELECTRÓNICA", 164.5, 47, { align: "center" });
+  line(52, rule, 0.2, 137, 192);
+  text(referencia, 164.5, 60, 10.5, true, ink, "center");
   y = Math.max(companyY + 7, 74);
   line(y, ink, 0.35); y += 9;
 
@@ -104,7 +107,12 @@ export function generarFacturaPDF(datos: FacturaDatos, numero?: number): ArrayBu
     y += height; line(y);
   });
 
-  y += 10; ensure(54);
+  y += 9;
+  const letras = wrap(`SON: ${importeEnLetras(totales.total, datos.moneda)}`, width - 8, 8);
+  ensure(letras.length * 4.2 + 63);
+  pdf.setFillColor("#F5F6F8"); pdf.rect(left, y, width, letras.length * 4.2 + 7, "F");
+  letras.forEach((value, i) => text(value, left + 4, y + 5 + i * 4.2, 8, false, ink));
+  y += letras.length * 4.2 + 17;
   const summaryTop = y;
   text("CONDICIONES DE PAGO", left, y + 1, 7.5, true, ink);
   text(datos.pago, left, y + 7, 9);
@@ -130,6 +138,7 @@ export function generarFacturaPDF(datos: FacturaDatos, numero?: number): ArrayBu
   for (let page = 1; page <= pdf.getNumberOfPages(); page++) {
     pdf.setPage(page); line(276, ink, 0.35);
     text(referencia, left, 282, 7, false, muted);
+    text(denominacion, 105, 282, 7, false, muted, "center");
     text(`${page} / ${pdf.getNumberOfPages()}`, right, 282, 7, false, muted, "right");
   }
   return pdf.output("arraybuffer");

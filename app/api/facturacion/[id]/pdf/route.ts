@@ -12,6 +12,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const factura = await db.facturaPrueba.findFirst({ where: { id, adminId: admin.id } });
     if (!factura) return NextResponse.json({ message: "Comprobante no encontrado" }, { status: 404 });
-    return respuestaPDF(generarFacturaPDF(facturaSchema.parse(factura.datos), factura.numero), numeroFactura(factura.numero), request.nextUrl.searchParams.get("download") === "1");
+    return respuestaPDF(generarFacturaPDF(facturaSchema.parse(factura.datos), factura.numero, factura.serie, factura.correlativo), numeroFactura(factura.numero, factura.serie, factura.correlativo), request.nextUrl.searchParams.get("download") === "1");
   } catch (error) { return errorFactura(error); }
 }

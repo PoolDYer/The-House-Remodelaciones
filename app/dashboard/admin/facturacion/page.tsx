@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Download, Eye, FilePlus2, Plus, Save, Search, Trash2, X } from "lucide-react";
-import { calcularFactura, facturaSchema, formatoDinero, nuevaFactura, numeroFactura, type FacturaDatos, type FacturaGuardada } from "@/lib/facturacion";
+import { calcularFactura, facturaSchema, formatoDinero, nuevaFactura, numeroFactura, serieFactura, nombreComprobante, type FacturaDatos, type FacturaGuardada } from "@/lib/facturacion";
 import styles from "./facturacion.module.css";
 import { FacturaPDFViewer } from "@/components/dashboard/FacturaPDFViewer";
 
@@ -77,7 +77,7 @@ export default function FacturacionPage() {
       : await api("/api/facturacion/preview", { method: "POST", body: JSON.stringify(draft) });
     const blob = await response.blob();
     setPdfUrl(URL.createObjectURL(blob));
-    setPdfNombre(factura ? numeroFactura(factura.numero) : "comprobante-borrador");
+    setPdfNombre(factura ? numeroFactura(factura.numero, factura.serie, factura.correlativo) : "comprobante-borrador");
   }
   async function vistaPrevia() {
     const valid = validar(); if (!valid) return;
@@ -93,7 +93,7 @@ export default function FacturacionPage() {
       const response = await api(actual ? `/api/facturacion/${actual.id}` : "/api/facturacion", { method: actual ? "PUT" : "POST", body: JSON.stringify(valid) });
       const saved: FacturaGuardada = await response.json();
       setActual(saved); setDatos(saved.datos); setDirty(false);
-      setNotice(`${numeroFactura(saved.numero)} guardado. Ya puedes descargar el PDF.`);
+      setNotice(`${numeroFactura(saved.numero, saved.serie, saved.correlativo)} guardado. Ya puedes descargar el PDF.`);
       await cargarHistorial(); await mostrarPDF(saved);
     } catch (err) { setError((err as Error).message); }
     finally { setBusy(""); }
@@ -112,7 +112,7 @@ export default function FacturacionPage() {
     try { await mostrarPDF(factura); } catch (err) { setError((err as Error).message); } finally { setBusy(""); }
   }
   async function eliminar(factura: FacturaGuardada) {
-    if (!window.confirm(`¿Eliminar el comprobante ${numeroFactura(factura.numero)}?`)) return;
+    if (!window.confirm(`¿Eliminar el comprobante ${numeroFactura(factura.numero, factura.serie, factura.correlativo)}?`)) return;
     if (actual?.id === factura.id && !puedeSalir()) return;
     setBusy("Eliminando comprobante"); setError("");
     try {
@@ -121,11 +121,11 @@ export default function FacturacionPage() {
       await cargarHistorial(); setNotice("Comprobante eliminado.");
     } catch (err) { setError((err as Error).message); } finally { setBusy(""); }
   }
-  const filtradas = facturas.filter(f => `${numeroFactura(f.numero)} ${f.datos.cliente.nombre} ${f.datos.cliente.documento}`.toLowerCase().includes(busqueda.toLowerCase()));
+  const filtradas = facturas.filter(f => `${numeroFactura(f.numero, f.serie, f.correlativo)} ${f.datos.cliente.nombre} ${f.datos.cliente.documento}`.toLowerCase().includes(busqueda.toLowerCase()));
 
   return <div className={styles.module}>
     <header className={styles.heading}>
-      <div><div className={styles.titleLine}><h1>Facturación</h1><span className={styles.badge}>Comprobantes</span></div><p>Emisión y administración de comprobantes en formato PDF.</p></div>
+      <div><div className={styles.titleLine}><h1>Facturación electrónica</h1><span className={styles.badge}>Comprobantes</span></div><p>Emisión y administración de comprobantes en formato PDF.</p></div>
       <button className={styles.primary} disabled={!!busy || loading} onClick={() => nuevo()}><FilePlus2 size={18} />Nuevo comprobante</button>
     </header>
     {error && <div className={styles.error} role="alert">{error}<button aria-label="Cerrar error" onClick={() => setError("")}><X size={16} /></button></div>}
@@ -133,10 +133,12 @@ export default function FacturacionPage() {
     {loading ? <p role="status">Cargando facturación…</p> : <>
       <div className={styles.workspace} ref={editor}>
         <form className={styles.editor} onSubmit={e => { e.preventDefault(); void guardar(); }}>
-          <div className={styles.editorHead}><div><h2>{actual ? numeroFactura(actual.numero) : "Nuevo comprobante"}</h2><p>{dirty ? "Cambios sin guardar" : actual ? "Comprobante guardado" : "Completa los datos para comenzar"}</p></div></div>
+          <div className={styles.editorHead}><div><h2>{actual ? numeroFactura(actual.numero, actual.serie, actual.correlativo) : "Nuevo comprobante"}</h2><p>{dirty ? "Cambios sin guardar" : actual ? "Comprobante guardado" : "Completa los datos para comenzar"}</p></div></div>
           <fieldset disabled={!!busy}>
             <section className={styles.section}><h3>Datos del comprobante</h3><div className={styles.grid3}>
-              <Campo label="Tipo"><select value={datos.tipo} onChange={e => cambiar("tipo", e.target.value as FacturaDatos["tipo"])}><option>Factura</option><option>Boleta</option></select></Campo>
+              <Campo label="Tipo de comprobante"><select aria-label="Tipo de comprobante" disabled={!!actual} value={datos.tipo} onChange={e => cambiar("tipo", e.target.value as FacturaDatos["tipo"])}><option value="Factura">Factura electrónica</option><option value="Boleta">Boleta de venta electrónica</option></select></Campo>
+              <Campo label="Serie"><input readOnly value={actual ? actual.serie || "001" : serieFactura(datos.tipo)} /></Campo>
+              <Campo label="Número correlativo"><input readOnly value={actual ? String(actual.correlativo ?? actual.numero).padStart(actual.serie ? 8 : 6, "0") : "Automático al guardar"} /></Campo>
               <Campo label="Moneda"><select value={datos.moneda} onChange={e => cambiar("moneda", e.target.value as FacturaDatos["moneda"])}><option value="PEN">Soles (S/)</option><option value="USD">Dólares (US$)</option></select></Campo>
               <Campo label="Forma de pago"><select value={datos.pago} onChange={e => cambiar("pago", e.target.value as FacturaDatos["pago"])}>{["Transferencia", "Efectivo", "Tarjeta", "Crédito"].map(v => <option key={v}>{v}</option>)}</select></Campo>
               <Campo label="Fecha de emisión"><input type="date" required value={datos.fecha} onChange={e => cambiar("fecha", e.target.value)} /></Campo>
@@ -176,7 +178,7 @@ export default function FacturacionPage() {
         <aside className={styles.previewColumn}>
           <div className={styles.preview}><div className={styles.previewHead}><div><h2>Documento PDF</h2><span>{pdfUrl ? `${pdfNombre} · A4` : "Vista previa del documento"}</span></div>{pdfUrl && <a className={styles.download} href={pdfUrl} download={`${pdfNombre}.pdf`}><Download size={17} />Descargar</a>}</div>
             {pdfUrl ? <><FacturaPDFViewer url={pdfUrl} /><a className={styles.openPdf} href={pdfUrl} target="_blank" rel="noreferrer">Abrir PDF en otra pestaña</a></> : <div className={styles.emptyPreview}>
-              <div className={styles.documentPlaceholder} aria-hidden="true"><div className={styles.placeholderHead}><strong>THE HOUSE</strong><span>FACTURA</span></div><div className={styles.placeholderDetails}><i /><i /><i /></div><div className={styles.placeholderRows}><i /><i /><i /></div><div className={styles.placeholderTotal}>TOTAL</div></div>
+              <div className={styles.documentPlaceholder} aria-hidden="true"><div className={styles.placeholderHead}><strong>THE HOUSE</strong><span>FACTURA ELECTRÓNICA</span></div><div className={styles.placeholderDetails}><i /><i /><i /></div><div className={styles.placeholderRows}><i /><i /><i /></div><div className={styles.placeholderTotal}>TOTAL</div></div>
               <h3>Vista previa del comprobante</h3><p>Complete los datos y seleccione “Vista previa PDF” para revisar el documento antes de descargarlo.</p><span>Formato A4</span>
             </div>}
           </div>
@@ -185,7 +187,7 @@ export default function FacturacionPage() {
         </aside>
       </div>
       <section className={styles.history}><div className={styles.historyHead}><div><h2>Comprobantes guardados <span>{facturas.length}</span></h2><p>Abre un documento para editarlo o volver a descargar su PDF.</p></div><label className={styles.search}><Search size={17} /><input aria-label="Buscar comprobantes" placeholder="Número, cliente o documento" value={busqueda} onChange={e => setBusqueda(e.target.value)} /></label></div>
-        {filtradas.length ? <div className={styles.tableScroll}><table><thead><tr><th>Comprobante</th><th>Cliente</th><th>Emisión</th><th>Total</th><th>Acciones</th></tr></thead><tbody>{filtradas.map(f => <tr key={f.id}><td><strong>{numeroFactura(f.numero)}</strong><small>{f.datos.tipo}</small></td><td>{f.datos.cliente.nombre}<small>{f.datos.cliente.tipoDocumento} {f.datos.cliente.documento}</small></td><td>{f.datos.fecha.split("-").reverse().join("/")}</td><td className={styles.amount}>{formatoDinero(calcularFactura(f.datos).total, f.datos.moneda)}</td><td><div className={styles.tableActions}><button disabled={!!busy} onClick={() => void abrir(f)}><Eye size={16} />Abrir</button><button className={styles.deleteButton} disabled={!!busy} aria-label={`Eliminar ${numeroFactura(f.numero)}`} onClick={() => void eliminar(f)}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div> : <div className={styles.emptyHistory}>{busqueda ? "No hay comprobantes que coincidan con tu búsqueda." : "Todavía no hay comprobantes. Guarda el primero desde el formulario."}</div>}
+        {filtradas.length ? <div className={styles.tableScroll}><table><thead><tr><th>Comprobante</th><th>Cliente</th><th>Emisión</th><th>Total</th><th>Acciones</th></tr></thead><tbody>{filtradas.map(f => <tr key={f.id}><td><strong>{numeroFactura(f.numero, f.serie, f.correlativo)}</strong><small>{nombreComprobante(f.datos.tipo)}</small></td><td>{f.datos.cliente.nombre}<small>{f.datos.cliente.tipoDocumento} {f.datos.cliente.documento}</small></td><td>{f.datos.fecha.split("-").reverse().join("/")}</td><td className={styles.amount}>{formatoDinero(calcularFactura(f.datos).total, f.datos.moneda)}</td><td><div className={styles.tableActions}><button disabled={!!busy} onClick={() => void abrir(f)}><Eye size={16} />Abrir</button><button className={styles.deleteButton} disabled={!!busy} aria-label={`Eliminar ${numeroFactura(f.numero, f.serie, f.correlativo)}`} onClick={() => void eliminar(f)}><Trash2 size={16} /></button></div></td></tr>)}</tbody></table></div> : <div className={styles.emptyHistory}>{busqueda ? "No hay comprobantes que coincidan con tu búsqueda." : "Todavía no hay comprobantes. Guarda el primero desde el formulario."}</div>}
       </section>
     </>}
   </div>;

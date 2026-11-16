@@ -76,7 +76,7 @@ export const DashboardSidebar = () => {
       icon: FileText,
     },
     {
-      label: "Facturación",
+      label: "Facturación electrónica",
       path: "/dashboard/admin/facturacion",
       icon: ReceiptText,
     },

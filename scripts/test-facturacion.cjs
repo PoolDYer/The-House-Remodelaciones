@@ -10,7 +10,7 @@ require.extensions['.ts'] = (module, filename) => {
   });
   module._compile(source.outputText, filename);
 };
-const { nuevaFactura, facturaSchema, calcularFactura } = require('../lib/facturacion.ts');
+const { nuevaFactura, facturaSchema, calcularFactura, numeroFactura, serieFactura, importeEnLetras } = require('../lib/facturacion.ts');
 const { generarFacturaPDF } = require('../lib/factura-pdf.ts');
 const example = {
   ...nuevaFactura(),
@@ -24,6 +24,16 @@ const example = {
   notas: 'Pago por transferencia bancaria.\nPlazo de entrega: 10 días hábiles. Instalación y acabados incluidos según las condiciones acordadas.',
 };
 assert.equal(facturaSchema.safeParse(example).success, true);
+assert.equal(serieFactura('Factura'), 'F001');
+assert.equal(serieFactura('Boleta'), 'B001');
+assert.equal(numeroFactura(22, 'F001', 1), 'F001-00000001');
+assert.equal(numeroFactura(23, 'B001', 99999999), 'B001-99999999');
+assert.equal(numeroFactura(22), '001-000022', 'Se conserva la numeración anterior');
+assert.equal(importeEnLetras(3609.92, 'PEN'), 'TRES MIL SEISCIENTOS NUEVE CON 92/100 SOLES');
+assert.equal(importeEnLetras(0, 'PEN'), 'CERO CON 00/100 SOLES');
+assert.equal(importeEnLetras(21.01, 'USD'), 'VEINTIÚN CON 01/100 DÓLARES AMERICANOS');
+assert.equal(importeEnLetras(1000000, 'PEN'), 'UN MILLÓN CON 00/100 SOLES');
+assert.equal(importeEnLetras(21001.99, 'PEN'), 'VEINTIÚN MIL UN CON 99/100 SOLES');
 assert.deepEqual(calcularFactura(example), {
   lineas: [{ bruto: 2500, descuento: 100, neto: 2400 }, { bruto: 360, descuento: 0, neto: 360 }, { bruto: 299.25, descuento: 0, neto: 299.25 }],
   bruto: 3159.25, descuentos: 100, base: 3059.25, igv: 550.67, total: 3609.92,
@@ -45,9 +55,10 @@ for (const field of ['precio', 'cantidad', 'descuento']) {
 assert.equal(facturaSchema.safeParse({ ...example, igv: 1e308 }).success, false);
 assert.equal(facturaSchema.safeParse({ ...example, lineas: Array.from({ length: 100 }, () => ({ ...example.lineas[0], cantidad: 10000, precio: 1000000 })) }).success, false);
 fs.mkdirSync('output/pdf', { recursive: true }); fs.mkdirSync('tmp/pdfs', { recursive: true });
-fs.writeFileSync('output/pdf/factura.pdf', Buffer.from(generarFacturaPDF(example, 1)));
+fs.writeFileSync('output/pdf/factura.pdf', Buffer.from(generarFacturaPDF(example, 1, 'F001', 1)));
+fs.writeFileSync('tmp/pdfs/boleta.pdf', Buffer.from(generarFacturaPDF({ ...example, tipo: 'Boleta' }, 2, 'B001', 1)));
 const long = { ...example, moneda: 'USD', notas: 'Observación extensa para verificar los saltos de página. '.repeat(20), lineas: Array.from({ length: 65 }, (_, i) => ({ ...example.lineas[i % 3], descripcion: `Concepto ${i + 1}: ${'Instalación de módulos, herrajes y acabados de melamina. '.repeat(6)}` })) };
 assert.equal(facturaSchema.safeParse(long).success, true);
-fs.writeFileSync('tmp/pdfs/factura-multipagina.pdf', Buffer.from(generarFacturaPDF(long, 2)));
+fs.writeFileSync('tmp/pdfs/factura-multipagina.pdf', Buffer.from(generarFacturaPDF(long, 3, 'F001', 2)));
 fs.writeFileSync('tmp/pdfs/ejemplo.json', JSON.stringify(example));
 console.log('Validaciones y cálculos correctos. PDFs de ejemplo y multipágina generados.');

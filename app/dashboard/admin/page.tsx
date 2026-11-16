@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link href="/dashboard/admin/facturacion" className="px-6 py-3 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition-colors text-center font-medium border border-black">
-              Facturación y PDF
+              Facturación electrónica
             </Link>
             <Link
               href="/dashboard/admin/productos/crear"

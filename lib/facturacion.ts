@@ -46,7 +46,7 @@ export const facturaSchema = z.object({
 });
 
 export type FacturaDatos = z.infer<typeof facturaSchema>;
-export type FacturaGuardada = { id: string; numero: number; datos: FacturaDatos; createdAt: string; updatedAt: string };
+export type FacturaGuardada = { id: string; numero: number; serie: string | null; correlativo: number | null; datos: FacturaDatos; createdAt: string; updatedAt: string };
 
 // Cantidad en milésimas y precio en céntimos: redondeo por concepto, sin acumular flotantes.
 function importeLinea(l: FacturaDatos["lineas"][number]) {
@@ -67,7 +67,32 @@ export function calcularFactura(data: Pick<FacturaDatos, "lineas" | "igv">) {
   const igv = Number((BigInt(base) * BigInt(tasa) + 5000n) / 10000n);
   return { lineas, bruto: bruto / 100, descuentos: descuentos / 100, base: base / 100, igv: igv / 100, total: (base + igv) / 100 };
 }
-export const numeroFactura = (numero?: number) => numero ? `001-${String(numero).padStart(6, "0")}` : "POR ASIGNAR";
+export const serieFactura = (tipo: FacturaDatos["tipo"]) => tipo === "Factura" ? "F001" : "B001";
+export const nombreComprobante = (tipo: FacturaDatos["tipo"]) => tipo === "Factura" ? "Factura electrónica" : "Boleta de venta electrónica";
+export function numeroFactura(numero?: number, serie?: string | null, correlativo?: number | null) {
+  if (serie && correlativo) return `${serie}-${String(correlativo).padStart(8, "0")}`;
+  // Conserva la identificación de los documentos anteriores al uso de series.
+  if (numero) return `001-${String(numero).padStart(6, "0")}`;
+  return serie ? `${serie} / POR ASIGNAR` : "POR ASIGNAR";
+}
+
+export function importeEnLetras(total: number, moneda: FacturaDatos["moneda"]) {
+  const unidades = ["cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve"];
+  const decenas = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+  const centenas = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+  const apocopar = (s: string) => s.replace(/veintiuno$/, "veintiún").replace(/uno$/, "un");
+  function entero(n: number): string {
+    if (n < 30) return unidades[n];
+    if (n < 100) return decenas[Math.floor(n / 10)] + (n % 10 ? ` y ${unidades[n % 10]}` : "");
+    if (n === 100) return "cien";
+    if (n < 1000) return centenas[Math.floor(n / 100)] + (n % 100 ? ` ${entero(n % 100)}` : "");
+    if (n < 1000000) return (n < 2000 ? "mil" : `${apocopar(entero(Math.floor(n / 1000)))} mil`) + (n % 1000 ? ` ${entero(n % 1000)}` : "");
+    return (n < 2000000 ? "un millón" : `${apocopar(entero(Math.floor(n / 1000000)))} millones`) + (n % 1000000 ? ` ${entero(n % 1000000)}` : "");
+  }
+  const centimos = Math.round(total * 100), parteEntera = Math.floor(centimos / 100);
+  const nombreMoneda = moneda === "PEN" ? (parteEntera === 1 ? "sol" : "soles") : (parteEntera === 1 ? "dólar americano" : "dólares americanos");
+  return `${apocopar(entero(parteEntera))} con ${String(centimos % 100).padStart(2, "0")}/100 ${nombreMoneda}`.toUpperCase();
+}
 export const formatoDinero = (value: number, moneda: string) => new Intl.NumberFormat("es-PE", { style: "currency", currency: moneda }).format(value);
 export function nuevaFactura(): FacturaDatos {
   const fecha = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

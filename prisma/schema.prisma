@@ -32,6 +32,8 @@ model Admin {
 model FacturaPrueba {
   id        String   @id @default(cuid())
   numero    Int      @unique @default(autoincrement())
+  serie     String?
+  correlativo Int?
   datos     Json
   adminId   String
   admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Restrict)
@@ -39,6 +41,12 @@ model FacturaPrueba {
   updatedAt DateTime @updatedAt
 
   @@index([adminId, createdAt])
+  @@unique([serie, correlativo])
+}
+
+model SerieFactura {
+  serie  String @id
+  ultimo Int    @default(0)
 }
 
 model RefreshToken {

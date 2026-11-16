@@ -24,6 +24,7 @@ console.log(JSON.stringify({token:jwt.sign({adminId:a.id,email:a.email,role:a.ro
 token = json.loads(subprocess.check_output(['node', '-e', setup], text=True))['token']
 headers = {'Authorization': f'Bearer {token}'}
 record_id = None
+extra_ids = []
 with sync_playwright() as p:
     launch = {'headless': True}
     if os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE'):
@@ -43,7 +44,11 @@ with sync_playwright() as p:
         page.add_init_script(f"localStorage.setItem('accessToken', {json.dumps(token)});")
         page.goto(f'{BASE}/dashboard/admin/facturacion')
         page.wait_for_load_state('networkidle')
-        expect(page.get_by_role('heading', name='Facturación', exact=True)).to_be_visible()
+        expect(page.get_by_role('heading', name='Facturación electrónica', exact=True)).to_be_visible()
+        expect(page.get_by_label('Serie', exact=True)).to_have_value('F001')
+        page.get_by_label('Tipo de comprobante', exact=True).select_option('Boleta')
+        expect(page.get_by_label('Serie', exact=True)).to_have_value('B001')
+        page.get_by_label('Tipo de comprobante', exact=True).select_option('Factura')
         expect(page.get_by_role('button', name='Guardar comprobante', exact=True)).to_be_visible()
         page.get_by_label('RUC', exact=True).fill('20000000001')
         page.get_by_label('Nombre o razón social del cliente *', exact=True).fill('Cliente QA de facturación')
@@ -82,7 +87,10 @@ with sync_playwright() as p:
         assert '3,256.80' in pdf_text
         presentation_text = (pdf_text + str(reader.metadata)).lower()
         assert all(term not in presentation_text for term in ['sin validez', 'de prueba', 'demostración', 'muestra', 'ejemplo', 'sunat', 'demo-'])
-        assert '001-' in pdf_text
+        assert result['serie'] == 'F001' and 1 <= result['correlativo'] <= 99999999
+        reference = f"F001-{result['correlativo']:08d}"
+        assert reference in pdf_text
+        assert 'ELECTRÓNICA' in pdf_text and 'SON:' in pdf_text
         with page.expect_download() as download:
             page.get_by_role('link', name='Descargar', exact=True).click()
         download.value.save_as(out / 'descarga-web.pdf')
@@ -100,6 +108,30 @@ with sync_playwright() as p:
         updated = next(f for f in changed if f['id'] == record_id)
         assert updated['datos']['lineas'][0]['precio'] == 2600
         assert updated['numero'] == result['numero']
+        assert updated['serie'] == result['serie'] and updated['correlativo'] == result['correlativo']
+        changed_type = dict(updated['datos'])
+        changed_type['tipo'] = 'Boleta'
+        assert request.put(f'{BASE}/api/facturacion/{record_id}', headers=headers, data=changed_type).status == 409
+        # Dos emisiones simultáneas reciben correlativos distintos y consecutivos.
+        concurrent = page.evaluate("""async datos => {
+          return Promise.all([1, 2].map(async () => {
+            const r = await fetch('/api/facturacion', {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+localStorage.getItem('accessToken')}, body:JSON.stringify(datos)});
+            return {status:r.status, body:await r.json()};
+          }));
+        }""", updated['datos'])
+        for response in concurrent:
+            if response['status'] == 201: extra_ids.append(response['body']['id'])
+        assert all(r['status'] == 201 for r in concurrent), concurrent
+        numbers = sorted(r['body']['correlativo'] for r in concurrent)
+        assert numbers[1] == numbers[0] + 1 and numbers[0] > result['correlativo']
+        boleta_response = request.post(f'{BASE}/api/facturacion', headers=headers, data=changed_type)
+        assert boleta_response.status == 201
+        boleta = boleta_response.json()
+        extra_ids.append(boleta['id'])
+        assert boleta['serie'] == 'B001' and boleta['correlativo'] >= 1
+        boleta_pdf = request.get(f"{BASE}/api/facturacion/{boleta['id']}/pdf", headers=headers)
+        boleta_text = '\n'.join(p.extract_text() for p in PdfReader(io.BytesIO(boleta_pdf.body())).pages)
+        assert f"B001-{boleta['correlativo']:08d}" in boleta_text and 'BOLETA DE VENTA' in boleta_text
         invalid = dict(updated['datos'])
         invalid['igv'] = -1
         assert request.post(f'{BASE}/api/facturacion', headers=headers, data=invalid).status == 400
@@ -117,6 +149,8 @@ with sync_playwright() as p:
         assert not errors, errors
         print('OK: acceso, validación, formulario, vista previa, guardado, edición, búsqueda, descarga y diseño adaptable.')
     finally:
+        for extra_id in extra_ids:
+            assert request.delete(f'{BASE}/api/facturacion/{extra_id}', headers=headers).status == 200
         if record_id:
             response = request.delete(f'{BASE}/api/facturacion/{record_id}', headers=headers)
             assert response.status == 200

@@ -3,6 +3,8 @@ import { ZodError } from "zod";
 import { verifyAdminFromToken } from "@/lib/permissions";
 import { db } from "@/lib/db";
 
+export class NumeracionAgotada extends Error {}
+
 export async function administradorFactura(request: NextRequest) {
   const auth = verifyAdminFromToken(request);
   if (!auth.valid || !auth.adminId) return null;
@@ -10,6 +12,7 @@ export async function administradorFactura(request: NextRequest) {
   return db.admin.findFirst({ where: { id: auth.adminId, role: "admin" }, select: { id: true } });
 }
 export function errorFactura(error: unknown) {
+  if (error instanceof NumeracionAgotada) return NextResponse.json({ message: error.message }, { status: 409 });
   if (error instanceof ZodError) return NextResponse.json({ message: error.issues[0]?.message, errors: error.issues }, { status: 400 });
   if (error instanceof SyntaxError) return NextResponse.json({ message: "Datos JSON inválidos" }, { status: 400 });
   console.error("Error de facturación:", error);
