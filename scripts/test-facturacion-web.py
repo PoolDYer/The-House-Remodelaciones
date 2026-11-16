@@ -68,6 +68,30 @@ with sync_playwright() as p:
         page.get_by_label('Zoom del PDF').select_option('1.5')
         expect(page.get_by_title('Vista previa del comprobante PDF')).to_have_attribute('data-rendered', 'true', timeout=30000)
         page.get_by_label('Zoom del PDF').select_option('1')
+        # Regresión: el render no debe reiniciarse al aparecer/desaparecer
+        # la barra de scroll ni al cambiar zoom/ancho rápidamente.
+        canvas = page.get_by_title('Vista previa del comprobante PDF')
+        for width in [1500, 1540, 1560, 1600]:
+            page.set_viewport_size({'width': width, 'height': 1100})
+            page.get_by_label('Zoom del PDF').select_option('2')
+            page.get_by_label('Zoom del PDF').select_option('1.25')
+            page.get_by_label('Zoom del PDF').select_option('1')
+            expect(canvas).to_have_attribute('data-rendered', 'true', timeout=30000)
+        stability = canvas.evaluate("""async canvas => {
+          const events=[];
+          const observer=new MutationObserver(records=>events.push(...records.map(r=>r.attributeName)));
+          observer.observe(canvas,{attributes:true,attributeFilter:['width','height','style','data-rendered']});
+          await new Promise(resolve=>setTimeout(resolve,2000));
+          observer.disconnect();
+          return {events,ready:canvas.dataset.rendered,width:canvas.width,height:canvas.height};
+        }""")
+        assert not stability['events'] and stability['ready'] == 'true', stability
+        assert stability['width'] > 0 and stability['height'] > 0
+        for _ in range(3):
+            with page.expect_response(lambda r: r.url.endswith('/api/facturacion/preview') and r.request.method == 'POST'):
+                page.get_by_role('button', name='Vista previa PDF', exact=True).click()
+            expect(canvas).to_have_attribute('data-rendered', 'true', timeout=30000)
+            expect(page.get_by_role('alert').filter(has_text='No se pudo')).to_have_count(0)
         with page.expect_response(lambda r: r.url == f'{BASE}/api/facturacion' and r.request.method == 'POST') as saved:
             page.get_by_role('button', name='Guardar comprobante', exact=True).click()
         result = saved.value.json()
