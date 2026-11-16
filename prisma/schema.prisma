@@ -20,11 +20,25 @@ model Admin {
   refreshTokens   RefreshToken[]
   presupuestos    Presupuesto[]  @relation("AdminPresupuestos")
   publicaciones   Publicacion[]
+  facturasPrueba   FacturaPrueba[]
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   @@index([email])
+}
+
+// Comprobantes internos de demostración. Sin integración ni validez SUNAT.
+model FacturaPrueba {
+  id        String   @id @default(cuid())
+  numero    Int      @unique @default(autoincrement())
+  datos     Json
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId, createdAt])
 }
 
 model RefreshToken {

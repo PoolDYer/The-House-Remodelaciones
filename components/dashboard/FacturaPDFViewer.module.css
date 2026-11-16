@@ -1,0 +1,14 @@
+.viewer { min-width: 0; background: #e7e9ed; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #d3d8e0; background: #f5f6f8; font-size: 11px; color: #485970; }
+.pagination { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.pagination button { display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 2px; }
+.pagination button:hover { background: #e1e5eb; }
+.pagination button:disabled { opacity: .3; cursor: not-allowed; }
+.toolbar select { font-size: 11px; background: white; border: 1px solid #cdd4df; border-radius: 2px; padding: 5px; max-width: 130px; }
+.viewport { max-height: 740px; min-height: 240px; overflow: auto; position: relative; scrollbar-width: thin; }
+.stage { display: flex; justify-content: center; width: max-content; min-width: 100%; padding: 20px 16px; }
+.stage canvas { display: block; background: white; box-shadow: 0 2px 8px #17283f14; max-width: none; }
+.loading { position: sticky; top: 0; padding: 8px; background: #e7e9ed; text-align: center; font-size: 11px; z-index: 1; color: #203b5b; }
+.message { padding: 24px; font-size: 13px; line-height: 1.7; color: #795c26; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 450px) { .toolbar { padding: 8px; gap: 4px; } .pagination { gap: 3px; } .toolbar select { max-width: 110px; } .viewport { max-height: 520px; } }

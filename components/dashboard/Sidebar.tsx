@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   List,
   Newspaper,
+  ReceiptText,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -73,6 +74,11 @@ export const DashboardSidebar = () => {
       label: "Cotizaciones",
       path: "/dashboard/admin/presupuestos",
       icon: FileText,
+    },
+    {
+      label: "Facturación",
+      path: "/dashboard/admin/facturacion",
+      icon: ReceiptText,
     },
     {
       label: "Configuración",
@@ -166,7 +172,9 @@ export const DashboardSidebar = () => {
     <>
       {/* Mobile menu button */}
       <button
-        className="md:hidden fixed top-4 right-4 z-50 bg-primary text-white p-2 rounded-lg"
+        className="md:hidden fixed top-4 right-4 z-50 bg-[var(--color-primary)] text-white p-2 rounded-lg"
+        aria-label={isOpen ? "Cerrar menú de administración" : "Abrir menú de administración"}
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}

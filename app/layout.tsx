@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/public/Navbar";
-import { Footer } from "@/components/public/Footer";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const metadata: Metadata = {
   title: "The House Remodelaciones - Muebles Premium en Melamine",
@@ -20,11 +19,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen relative bg-white" suppressHydrationWarning>
         <div className="relative z-0">
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
+          <PublicShell>{children}</PublicShell>
         </div>
       </body>
     </html>
