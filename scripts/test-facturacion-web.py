@@ -90,7 +90,7 @@ with sync_playwright() as p:
         assert result['serie'] == 'F001' and 1 <= result['correlativo'] <= 99999999
         reference = f"F001-{result['correlativo']:08d}"
         assert reference in pdf_text
-        assert 'ELECTRÓNICA' in pdf_text and 'SON:' in pdf_text
+        assert 'ELECTRÓNICA' in pdf_text and 'IMPORTE EN LETRAS:' in pdf_text
         with page.expect_download() as download:
             page.get_by_role('link', name='Descargar', exact=True).click()
         download.value.save_as(out / 'descarga-web.pdf')

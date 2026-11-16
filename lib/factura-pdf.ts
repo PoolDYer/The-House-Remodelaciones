@@ -5,141 +5,157 @@ import { calcularFactura, importeEnLetras, nombreComprobante, numeroFactura, ser
 
 export function generarFacturaPDF(datos: FacturaDatos, numero?: number, serie?: string | null, correlativo?: number | null): ArrayBuffer {
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
-  const ink = "#17283F", textColor = "#252B33", muted = "#626A74", rule = "#CFD3D9";
-  const left = 18, right = 192, width = right - left;
+  const black = "#151515", gray = "#8B8B8B", border = "#B7B7B7", blue = "#69C9EF";
+  const left = 13, right = 197, width = right - left;
   const referencia = numeroFactura(numero, serie ?? (numero ? undefined : serieFactura(datos.tipo)), correlativo);
   const denominacion = nombreComprobante(datos.tipo);
   const totales = calcularFactura(datos);
+  const currency = datos.moneda === "PEN" ? "S/" : "US$";
   const money = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const date = (s: string) => s.split("-").reverse().join("/");
-  let y = 20;
+  const leading = 3.25;
+  let y = 12;
 
-  function text(value: string, x: number, top: number, size = 9, bold = false, color = textColor, align: "left" | "right" | "center" = "left") {
+  function text(value: string, x: number, top: number, size = 7.5, bold = false, color = black, align: "left" | "right" | "center" = "left") {
     pdf.setFont("helvetica", bold ? "bold" : "normal");
     pdf.setFontSize(size); pdf.setTextColor(color); pdf.text(value, x, top, { align });
   }
-  function line(top: number, color = rule, thickness = 0.2, start = left, end = right) {
-    pdf.setDrawColor(color); pdf.setLineWidth(thickness); pdf.line(start, top, end, top);
-  }
-  function wrap(value: string, maxWidth: number, size = 9): string[] {
-    pdf.setFont("helvetica", "normal"); pdf.setFontSize(size);
+  function wrap(value: string, maxWidth: number, size = 7.5, bold = false): string[] {
+    pdf.setFont("helvetica", bold ? "bold" : "normal"); pdf.setFontSize(size);
     return pdf.splitTextToSize(value, maxWidth);
   }
-  function paragraph(value: string, x: number, top: number, maxWidth: number, size = 9, bold = false, color = textColor) {
-    const lines = wrap(value, maxWidth, size);
-    lines.forEach((value, i) => text(value, x, top + i * 4.2, size, bold, color));
-    return top + lines.length * 4.2;
+  function paragraph(value: string, x: number, top: number, maxWidth: number, size = 7.5, bold = false) {
+    const lines = wrap(value, maxWidth, size, bold);
+    lines.forEach((value, i) => text(value, x, top + i * leading, size, bold));
+    return top + lines.length * leading;
+  }
+  function line(top: number, start = left, end = right) {
+    pdf.setDrawColor(border); pdf.setLineWidth(0.18); pdf.line(start, top, end, top);
+  }
+  function box(x: number, top: number, w: number, h: number, fill?: string) {
+    pdf.setDrawColor(border); pdf.setLineWidth(0.22);
+    if (fill) pdf.setFillColor(fill);
+    pdf.roundedRect(x, top, w, h, 1.2, 1.2, fill ? "FD" : "S");
   }
   function continuation() {
     pdf.addPage();
-    const companyEnd = paragraph(datos.empresa.nombre, left, 18, 89, 8.5, true, ink);
-    text(denominacion.toUpperCase(), right, 18, 8, false, ink, "right");
-    text(referencia, right, 24, 9, true, ink, "right");
-    y = Math.max(companyEnd + 3, 29); line(y, ink, 0.35); y += 7;
+    const end = paragraph(datos.empresa.nombre, left, 13, 100, 8, true);
+    text(denominacion.toUpperCase(), right, 13, 7.5, true, black, "right");
+    text(referencia, right, 17, 8, true, black, "right");
+    y = Math.max(end + 2, 22); line(y); y += 3;
   }
-  function ensure(height: number) { if (y + height > 266) continuation(); }
-
+  function ensure(height: number) { if (y + height > 274) continuation(); }
   pdf.setProperties({ title: `${denominacion} ${referencia}`, subject: `${denominacion} ${referencia}`, author: datos.empresa.nombre });
-  // Encabezado empresarial e identificación del comprobante.
-  line(17, ink, 0.5);
-  let companyX = left;
+
+  // Helvetica regular/negrita mantiene el estilo sans serif de la referencia.
+  let brandX = left;
   try {
     const logo = new Uint8Array(fs.readFileSync(path.join(process.cwd(), "public/logo.png")));
     const props = pdf.getImageProperties(logo);
-    const imageWidth = 23, imageHeight = imageWidth * props.height / props.width;
-    pdf.addImage(logo, "PNG", left, 24, imageWidth, imageHeight);
-    companyX = 47;
-  } catch { /* La razón social identifica al emisor si el logo no está disponible. */ }
-  let companyY = paragraph(datos.empresa.nombre, companyX, 29, 81, 11, true, ink) + 2;
-  if (datos.empresa.ruc) { text(`RUC ${datos.empresa.ruc}`, companyX, companyY, 8.5, true); companyY += 5; }
-  if (datos.empresa.direccion) companyY = paragraph(datos.empresa.direccion, companyX, companyY, 81, 8, false, muted);
-  if (datos.empresa.telefono) { text(`Tel. ${datos.empresa.telefono}`, companyX, companyY, 8, false, muted); companyY += 4.5; }
-  if (datos.empresa.email) companyY = paragraph(datos.empresa.email, companyX, companyY, 81, 8, false, muted);
+    pdf.addImage(logo, "PNG", left, 12, 25, 25 * props.height / props.width);
+    brandX = 42;
+  } catch { /* La razón social sigue identificando al emisor. */ }
+  const brandEnd = paragraph(datos.empresa.nombre, brandX, 18, 129 - brandX, 11, true);
+  let companyY = Math.max(brandEnd + 2, 35);
+  if (datos.empresa.ruc) { text(`RUC ${datos.empresa.ruc}`, left, companyY, 7.2, true); companyY += leading; }
+  if (datos.empresa.direccion) companyY = paragraph(datos.empresa.direccion, left, companyY, 119, 7.2);
+  if (datos.empresa.telefono) { text(`TELÉFONO: ${datos.empresa.telefono}`, left, companyY, 7.2); companyY += leading; }
+  if (datos.empresa.email) companyY = paragraph(datos.empresa.email, left, companyY, 119, 7.2);
 
-  pdf.setDrawColor(ink); pdf.setLineWidth(0.35); pdf.rect(137, 23, 55, 42);
-  text(datos.empresa.ruc ? `RUC ${datos.empresa.ruc}` : "COMPROBANTE", 164.5, 30, 9, true, ink, "center");
-  pdf.setFont("times", "normal"); pdf.setFontSize(datos.tipo === "Factura" ? 21 : 14); pdf.setTextColor(ink);
-  pdf.text(datos.tipo === "Factura" ? "FACTURA" : "BOLETA DE VENTA", 164.5, 40, { align: "center" });
-  pdf.setFontSize(14); pdf.text("ELECTRÓNICA", 164.5, 47, { align: "center" });
-  line(52, rule, 0.2, 137, 192);
-  text(referencia, 164.5, 60, 10.5, true, ink, "center");
-  y = Math.max(companyY + 7, 74);
-  line(y, ink, 0.35); y += 9;
+  box(137, 12, 60, 31, blue);
+  text(datos.empresa.ruc ? `RUC ${datos.empresa.ruc}` : "COMPROBANTE", 167, 18.5, 11.5, true, black, "center");
+  text(datos.tipo === "Factura" ? "FACTURA" : "BOLETA DE VENTA", 167, 25, datos.tipo === "Factura" ? 14 : 11.5, true, black, "center");
+  text("ELECTRÓNICA", 167, 31, 13.5, true, black, "center");
+  text(referencia, 167, 38, 11, true, black, "center");
+  y = Math.max(companyY + 2, 47);
 
+  // Ambos recuadros crecen con los datos, sin alturas en blanco innecesarias.
   const clientTop = y;
-  text("SEÑOR(ES)", left, y, 7.5, true, muted);
-  y = paragraph(datos.cliente.nombre, left, y + 6, 105, 10, true, ink);
-  text(`${datos.cliente.tipoDocumento} ${datos.cliente.documento}`, left, y + 1, 8.5); y += 7;
-  if (datos.cliente.direccion) y = paragraph(datos.cliente.direccion, left, y, 105, 8.5, false, muted);
-  if (datos.cliente.email) y = paragraph(datos.cliente.email, left, y, 105, 8, false, muted);
-  for (const [label, value, offset] of [
-    ["Fecha de emisión", date(datos.fecha), 0],
-    ["Vencimiento", date(datos.vencimiento), 7],
-    ["Moneda", datos.moneda === "PEN" ? "Soles (PEN)" : "Dólares (USD)", 14],
-    ["Forma de pago", datos.pago, 21],
-  ] as const) {
-    text(label, 132, clientTop + offset, 8, false, muted);
-    text(value, right, clientTop + offset, 8.5, true, textColor, "right");
+  let clientY = y + 4.5;
+  const clientRows = [
+    ["CLIENTE", datos.cliente.nombre],
+    [datos.cliente.tipoDocumento, datos.cliente.documento],
+    ["DIRECCIÓN", datos.cliente.direccion],
+    ["CORREO", datos.cliente.email],
+  ];
+  for (const [label, value] of clientRows) {
+    if (!value) continue;
+    text(label, left + 1.5, clientY, 7, true);
+    text(":", 40, clientY, 7);
+    clientY = paragraph(value, 43, clientY, 89, 7.2);
   }
-  y = Math.max(y + 9, clientTop + 33);
+  const clientHeight = Math.max(23, clientY - clientTop + 2);
+  box(left, clientTop, 122, clientHeight);
+  box(137, clientTop, 60, clientHeight);
+  for (const [label, value, offset] of [
+    ["FECHA EMISIÓN", date(datos.fecha), 0],
+    ["VENCIMIENTO", date(datos.vencimiento), 4],
+    ["MONEDA", datos.moneda === "PEN" ? "SOLES" : "DÓLARES", 8],
+    ["FORMA DE PAGO", datos.pago, 12],
+  ] as const) {
+    text(label, 139, clientTop + 4.5 + offset, 6.8, true);
+    text(value, 195, clientTop + 4.5 + offset, 7, false, black, "right");
+  }
+  y = clientTop + clientHeight + 2;
 
   function tableHeader() {
-    pdf.setFillColor("#F1F2F4"); pdf.rect(left, y, width, 9, "F");
-    line(y, ink, 0.35); line(y + 9, rule);
-    text("Ítem", 20, y + 5.8, 7.5, true, ink);
-    text("Descripción del bien o servicio", 28, y + 5.8, 7.5, true, ink);
-    text("Unidad", 98, y + 5.8, 7.5, true, ink, "center");
-    for (const [label, x] of [["Cant.", 117], ["P. unitario", 142], ["Dscto.", 163], ["Importe", 190]] as const) text(label, x, y + 5.8, 7.5, true, ink, "right");
-    y += 9;
+    box(left, y, width, 6.5, blue);
+    text("CANT.", 20, y + 4.3, 7, true, black, "center");
+    text("UM", 33, y + 4.3, 7, true, black, "center");
+    text("ÍTEM", 45, y + 4.3, 7, true, black, "center");
+    text("DESCRIPCIÓN", 53, y + 4.3, 7, true);
+    text("P. UNIT.", 151, y + 4.3, 7, true, black, "right");
+    text("DSCTO.", 171, y + 4.3, 7, true, black, "right");
+    text("IMPORTE", 195, y + 4.3, 7, true, black, "right");
+    y += 6.5;
   }
-  const rowHeight = (descripcion: string) => Math.max(15, wrap(descripcion, 60, 8.5).length * 4.2 + 8);
-  ensure(9 + rowHeight(datos.lineas[0].descripcion)); tableHeader();
+  const rowHeight = (descripcion: string) => Math.max(7.5, wrap(descripcion, 75, 7.5).length * leading + 3.5);
+  ensure(6.5 + rowHeight(datos.lineas[0].descripcion)); tableHeader();
   datos.lineas.forEach((item, i) => {
     const height = rowHeight(item.descripcion);
-    if (y + height > 266) { continuation(); tableHeader(); }
-    text(String(i + 1).padStart(2, "0"), 20, y + 6.5, 8, false, muted);
-    paragraph(item.descripcion, 28, y + 6.5, 60, 8.5);
-    text(item.unidad, 98, y + 6.5, 7.5, false, muted, "center");
-    text(item.cantidad.toLocaleString("en-US", { maximumFractionDigits: 3 }), 117, y + 6.5, 8, false, textColor, "right");
-    text(money(item.precio), 142, y + 6.5, 8, false, textColor, "right");
-    text(money(item.descuento), 163, y + 6.5, 8, false, textColor, "right");
-    text(money(totales.lineas[i].neto), 190, y + 6.5, 8.5, true, textColor, "right");
+    if (y + height > 274) { continuation(); tableHeader(); }
+    if (i % 2) { pdf.setFillColor("#F2F2F2"); pdf.rect(left, y, width, height, "F"); }
+    text(item.cantidad.toLocaleString("en-US", { maximumFractionDigits: 3 }), 20, y + 4, 7.2, false, black, "center");
+    text(item.unidad, 33, y + 4, 6.8, false, black, "center");
+    text(String(i + 1).padStart(2, "0"), 45, y + 4, 7.2, false, black, "center");
+    paragraph(item.descripcion, 53, y + 4, 75, 7.5);
+    text(money(item.precio), 151, y + 4, 7.2, false, black, "right");
+    text(money(item.descuento), 171, y + 4, 7.2, false, black, "right");
+    text(money(totales.lineas[i].neto), 195, y + 4, 7.5, false, black, "right");
     y += height; line(y);
   });
 
-  y += 9;
-  const letras = wrap(`SON: ${importeEnLetras(totales.total, datos.moneda)}`, width - 8, 8);
-  ensure(letras.length * 4.2 + 63);
-  pdf.setFillColor("#F5F6F8"); pdf.rect(left, y, width, letras.length * 4.2 + 7, "F");
-  letras.forEach((value, i) => text(value, left + 4, y + 5 + i * 4.2, 8, false, ink));
-  y += letras.length * 4.2 + 17;
-  const summaryTop = y;
-  text("CONDICIONES DE PAGO", left, y + 1, 7.5, true, ink);
-  text(datos.pago, left, y + 7, 9);
-  text(`Vencimiento: ${date(datos.vencimiento)}`, left, y + 13, 8, false, muted);
-  text("Precios unitarios expresados sin IGV.", left, y + 20, 7.5, false, muted);
-  const totals = [["Subtotal", totales.bruto], ["Descuentos", -totales.descuentos], ["Base imponible", totales.base], [`IGV (${datos.igv}%)`, totales.igv]] as const;
+  y += 3;
+  ensure(46);
+  const totals = [["SUBTOTAL", totales.bruto], ["DESCUENTOS", -totales.descuentos], ["BASE IMPONIBLE", totales.base], [`IGV ${datos.igv}%`, totales.igv], ["TOTAL", totales.total]] as const;
   totals.forEach(([label, value], i) => {
-    text(label, 122, summaryTop + i * 6.5, 8.5, false, muted);
-    text(money(value), right, summaryTop + i * 6.5, 9, false, textColor, "right");
+    const isTotal = i === totals.length - 1;
+    if (isTotal) line(y - 2.2, 128, right);
+    text(label, 158, y, isTotal ? 8 : 7.2, true, black, "right");
+    text(currency, 170, y, 7.2, isTotal);
+    text(money(value), right, y, isTotal ? 8.5 : 7.2, isTotal, black, "right");
+    y += isTotal ? 5 : 3.8;
   });
-  line(summaryTop + 25, ink, 0.35, 122, right);
-  text(`TOTAL ${datos.moneda === "PEN" ? "S/" : "US$"}`, 122, summaryTop + 35, 10, true, ink);
-  text(money(totales.total), right, summaryTop + 35, 16, true, ink, "right");
-  line(summaryTop + 41, ink, 0.5, 122, right);
+  y += 2;
+  const letters = wrap(`IMPORTE EN LETRAS: ${importeEnLetras(totales.total, datos.moneda)}`, width - 5, 7.2);
+  const lettersHeight = letters.length * leading + 3;
+  ensure(lettersHeight + 9); box(left, y, width, lettersHeight);
+  letters.forEach((value, i) => text(value, left + 2, y + 3.5 + i * leading, 7.2));
+  y += lettersHeight + 5;
+  text("MEDIO DE PAGO:", left, y, 7.2, true);
+  text(`${datos.pago}. Vencimiento: ${date(datos.vencimiento)}`, 39, y, 7.2);
+  y += 4;
   if (datos.notas) {
-    y = summaryTop + 31;
-    text("OBSERVACIONES", left, y, 7.5, true, ink); y += 6;
-    wrap(datos.notas, 93, 8).forEach(value => {
-      if (y + 5 > 266) { continuation(); text("OBSERVACIONES (CONTINUACIÓN)", left, y, 7.5, true, ink); y += 7; }
-      text(value, left, y, 8, false, muted); y += 4;
+    ensure(8); text("OBSERVACIONES:", left, y, 7.2, true); y += 3.5;
+    wrap(datos.notas, width - 2, 7.2).forEach(value => {
+      ensure(4); text(value, left, y, 7.2); y += leading;
     });
   }
   for (let page = 1; page <= pdf.getNumberOfPages(); page++) {
-    pdf.setPage(page); line(276, ink, 0.35);
-    text(referencia, left, 282, 7, false, muted);
-    text(denominacion, 105, 282, 7, false, muted, "center");
-    text(`${page} / ${pdf.getNumberOfPages()}`, right, 282, 7, false, muted, "right");
+    pdf.setPage(page);
+    text(referencia, left, 286, 6.5, false, gray);
+    text(denominacion, 105, 286, 6.5, false, gray, "center");
+    text(`Página ${page} de ${pdf.getNumberOfPages()}`, right, 286, 6.5, false, gray, "right");
   }
   return pdf.output("arraybuffer");
 }
