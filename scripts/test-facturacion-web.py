@@ -41,7 +41,8 @@ with sync_playwright() as p:
         page = context.new_page()
         errors = []
         page.on('pageerror', lambda e: errors.append(str(e)))
-        page.add_init_script(f"localStorage.setItem('accessToken', {json.dumps(token)});")
+        # No inyectar la sesión en los frames internos del visor PDF de Chrome.
+        page.add_init_script(f"if (window === window.top) {{ localStorage.setItem('accessToken', {json.dumps(token)}); }}")
         page.goto(f'{BASE}/dashboard/admin/facturacion')
         page.wait_for_load_state('networkidle')
         expect(page.get_by_role('heading', name='Facturación electrónica', exact=True)).to_be_visible()
@@ -50,6 +51,9 @@ with sync_playwright() as p:
         expect(page.get_by_label('Serie', exact=True)).to_have_value('B001')
         page.get_by_label('Tipo de comprobante', exact=True).select_option('Factura')
         expect(page.get_by_role('button', name='Guardar comprobante', exact=True)).to_be_visible()
+        page.get_by_role('button', name='Vista previa PDF', exact=True).click()
+        expect(page.get_by_role('alert').filter(has_text='Ingresa el nombre del cliente')).to_be_visible()
+        expect(page.get_by_title('Vista previa del comprobante PDF')).to_have_count(0)
         page.get_by_label('RUC', exact=True).fill('20000000001')
         page.get_by_label('Nombre o razón social del cliente *', exact=True).fill('Cliente QA de facturación')
         page.get_by_label('Número de documento *', exact=True).fill('20000000002')
@@ -64,33 +68,29 @@ with sync_playwright() as p:
         assert all(term not in visible_text for term in ['sin validez', 'de prueba', 'demostración', 'muestra', 'ejemplo', 'sunat', 'demo-'])
         page.get_by_role('button', name='Vista previa PDF').click()
         expect(page.get_by_title('Vista previa del comprobante PDF')).to_be_visible(timeout=30000)
-        expect(page.get_by_title('Vista previa del comprobante PDF')).to_have_attribute('data-rendered', 'true', timeout=30000)
-        page.get_by_label('Zoom del PDF').select_option('1.5')
-        expect(page.get_by_title('Vista previa del comprobante PDF')).to_have_attribute('data-rendered', 'true', timeout=30000)
-        page.get_by_label('Zoom del PDF').select_option('1')
-        # Regresión: el render no debe reiniciarse al aparecer/desaparecer
-        # la barra de scroll ni al cambiar zoom/ancho rápidamente.
-        canvas = page.get_by_title('Vista previa del comprobante PDF')
+        frame = page.get_by_title('Vista previa del comprobante PDF')
+        first_url = frame.get_attribute('src')
+        assert first_url.startswith('blob:')
+        original_pdf = page.evaluate("async url => {const r=await fetch(url); return {type:r.headers.get('Content-Type'),size:(await r.blob()).size};}", first_url.split('#')[0])
+        assert original_pdf['type'].startswith('application/pdf') and original_pdf['size'] > 1000
         for width in [1500, 1540, 1560, 1600]:
             page.set_viewport_size({'width': width, 'height': 1100})
-            page.get_by_label('Zoom del PDF').select_option('2')
-            page.get_by_label('Zoom del PDF').select_option('1.25')
-            page.get_by_label('Zoom del PDF').select_option('1')
-            expect(canvas).to_have_attribute('data-rendered', 'true', timeout=30000)
-        stability = canvas.evaluate("""async canvas => {
+            assert frame.get_attribute('src') == first_url
+            assert frame.evaluate('e => e.getBoundingClientRect().height') == 740
+        stability = frame.evaluate("""async frame => {
           const events=[];
           const observer=new MutationObserver(records=>events.push(...records.map(r=>r.attributeName)));
-          observer.observe(canvas,{attributes:true,attributeFilter:['width','height','style','data-rendered']});
-          await new Promise(resolve=>setTimeout(resolve,2000));
+          observer.observe(frame,{attributes:true});
+          await new Promise(resolve=>setTimeout(resolve,1500));
           observer.disconnect();
-          return {events,ready:canvas.dataset.rendered,width:canvas.width,height:canvas.height};
+          return events;
         }""")
-        assert not stability['events'] and stability['ready'] == 'true', stability
-        assert stability['width'] > 0 and stability['height'] > 0
+        assert not stability, stability
         for _ in range(3):
             with page.expect_response(lambda r: r.url.endswith('/api/facturacion/preview') and r.request.method == 'POST'):
                 page.get_by_role('button', name='Vista previa PDF', exact=True).click()
-            expect(canvas).to_have_attribute('data-rendered', 'true', timeout=30000)
+            expect(frame).to_be_visible(timeout=30000)
+            expect(page.get_by_role('button', name='Vista previa PDF', exact=True)).to_be_enabled(timeout=30000)
             expect(page.get_by_role('alert').filter(has_text='No se pudo')).to_have_count(0)
         with page.expect_response(lambda r: r.url == f'{BASE}/api/facturacion' and r.request.method == 'POST') as saved:
             page.get_by_role('button', name='Guardar comprobante', exact=True).click()
@@ -99,8 +99,7 @@ with sync_playwright() as p:
         record_id = result['id']
         expect(page.get_by_role('status').filter(has_text='guardado')).to_be_visible(timeout=30000)
         expect(page.get_by_role('link', name='Descargar', exact=True)).to_be_visible(timeout=30000)
-        page.wait_for_load_state('networkidle')
-        expect(page.get_by_title('Vista previa del comprobante PDF')).to_have_attribute('data-rendered', 'true', timeout=30000)
+        expect(page.get_by_title('Vista previa del comprobante PDF')).to_be_visible(timeout=30000)
         pdf_response = request.get(f'{BASE}/api/facturacion/{record_id}/pdf', headers=headers)
         assert pdf_response.status == 200
         assert pdf_response.headers['content-type'].startswith('application/pdf')
@@ -161,7 +160,7 @@ with sync_playwright() as p:
         assert request.post(f'{BASE}/api/facturacion', headers=headers, data=invalid).status == 400
         for width in [390, 768]:
             page.set_viewport_size({'width': width, 'height': 844})
-            page.wait_for_load_state('networkidle')
+            expect(page.get_by_title('Vista previa del comprobante PDF')).to_be_visible()
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), f'Horizontal overflow at {width}'
             page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(out / f'facturacion-{width}.png'), full_page=True)

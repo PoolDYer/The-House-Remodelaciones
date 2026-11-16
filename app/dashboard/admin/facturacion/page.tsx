@@ -24,6 +24,8 @@ export default function FacturacionPage() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfNombre, setPdfNombre] = useState("comprobante-borrador");
   const editor = useRef<HTMLDivElement>(null);
+  const preview = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const totales = calcularFactura(datos);
   const money = (value: number) => formatoDinero(value, datos.moneda);
 
@@ -58,6 +60,12 @@ export default function FacturacionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
+  useEffect(() => {
+    if (pdfUrl) preview.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [pdfUrl]);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
 
   function editar(next: FacturaDatos) {
     setDatos(next); setDirty(true); setPdfUrl(null); setError(""); setNotice("");
@@ -76,6 +84,7 @@ export default function FacturacionPage() {
       ? await api(`/api/facturacion/${factura.id}/pdf`)
       : await api("/api/facturacion/preview", { method: "POST", body: JSON.stringify(draft) });
     const blob = await response.blob();
+    if (!blob.size || !blob.type.includes("application/pdf")) throw new Error("El servidor no devolvió un PDF. Vuelve a intentarlo.");
     setPdfUrl(URL.createObjectURL(blob));
     setPdfNombre(factura ? numeroFactura(factura.numero, factura.serie, factura.correlativo) : "comprobante-borrador");
   }
@@ -128,7 +137,7 @@ export default function FacturacionPage() {
       <div><div className={styles.titleLine}><h1>Facturación electrónica</h1><span className={styles.badge}>Comprobantes</span></div><p>Emisión y administración de comprobantes en formato PDF.</p></div>
       <button className={styles.primary} disabled={!!busy || loading} onClick={() => nuevo()}><FilePlus2 size={18} />Nuevo comprobante</button>
     </header>
-    {error && <div className={styles.error} role="alert">{error}<button aria-label="Cerrar error" onClick={() => setError("")}><X size={16} /></button></div>}
+    {error && <div ref={errorRef} className={styles.error} role="alert">{error}<button aria-label="Cerrar error" onClick={() => setError("")}><X size={16} /></button></div>}
     {notice && <div className={styles.notice} role="status">{notice}</div>}
     {loading ? <p role="status">Cargando facturación…</p> : <>
       <div className={styles.workspace} ref={editor}>
@@ -173,10 +182,13 @@ export default function FacturacionPage() {
             </section>
             <section className={styles.section}><Campo label="Observaciones y condiciones"><textarea maxLength={1200} rows={3} value={datos.notas} onChange={e => cambiar("notas", e.target.value)} /></Campo></section>
           </fieldset>
-          <div className={styles.actions}><button type="button" className={styles.secondary} disabled={!!busy} onClick={() => void vistaPrevia()}><Eye size={17} />Vista previa PDF</button><button type="submit" className={styles.primary} disabled={!!busy || (!!actual && !dirty)}><Save size={17} />{actual ? "Guardar cambios" : "Guardar comprobante"}</button></div>
+          <div className={styles.actions}>
+            {error && <p className={styles.actionError}>{error}</p>}
+            {busy && <p className={styles.actionStatus} role="status">{busy}…</p>}
+            <button type="button" className={styles.secondary} disabled={!!busy} onClick={() => void vistaPrevia()}><Eye size={17} />{busy === "Generando PDF" ? "Generando PDF…" : "Vista previa PDF"}</button><button type="submit" className={styles.primary} disabled={!!busy || (!!actual && !dirty)}><Save size={17} />{actual ? "Guardar cambios" : "Guardar comprobante"}</button></div>
         </form>
         <aside className={styles.previewColumn}>
-          <div className={styles.preview}><div className={styles.previewHead}><div><h2>Documento PDF</h2><span>{pdfUrl ? `${pdfNombre} · A4` : "Vista previa del documento"}</span></div>{pdfUrl && <a className={styles.download} href={pdfUrl} download={`${pdfNombre}.pdf`}><Download size={17} />Descargar</a>}</div>
+          <div ref={preview} className={styles.preview}><div className={styles.previewHead}><div><h2>Documento PDF</h2><span>{pdfUrl ? `${pdfNombre} · A4` : "Vista previa del documento"}</span></div>{pdfUrl && <a className={styles.download} href={pdfUrl} download={`${pdfNombre}.pdf`}><Download size={17} />Descargar</a>}</div>
             {pdfUrl ? <><FacturaPDFViewer url={pdfUrl} /><a className={styles.openPdf} href={pdfUrl} target="_blank" rel="noreferrer">Abrir PDF en otra pestaña</a></> : <div className={styles.emptyPreview}>
               <div className={styles.documentPlaceholder} aria-hidden="true"><div className={styles.placeholderHead}><strong>THE HOUSE</strong><span>FACTURA ELECTRÓNICA</span></div><div className={styles.placeholderDetails}><i /><i /><i /></div><div className={styles.placeholderRows}><i /><i /><i /></div><div className={styles.placeholderTotal}>TOTAL</div></div>
               <h3>Vista previa del comprobante</h3><p>Complete los datos y seleccione “Vista previa PDF” para revisar el documento antes de descargarlo.</p><span>Formato A4</span>
