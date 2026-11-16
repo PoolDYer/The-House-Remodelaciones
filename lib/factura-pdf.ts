@@ -126,15 +126,20 @@ export function generarFacturaPDF(datos: FacturaDatos, numero?: number, serie?: 
   });
 
   y += 3;
-  ensure(46);
+  ensure(54);
   const totals = [["SUBTOTAL", totales.bruto], ["DESCUENTOS", -totales.descuentos], ["BASE IMPONIBLE", totales.base], [`IGV ${datos.igv}%`, totales.igv], ["TOTAL", totales.total]] as const;
   totals.forEach(([label, value], i) => {
     const isTotal = i === totals.length - 1;
-    if (isTotal) line(y - 2.2, 128, right);
+    if (isTotal) {
+      // Separa la regla del IGV y deja aire sobre la línea base del total.
+      y += 1.5;
+      line(y, 128, right);
+      y += 5;
+    }
     text(label, 158, y, isTotal ? 8 : 7.2, true, black, "right");
     text(currency, 170, y, 7.2, isTotal);
     text(money(value), right, y, isTotal ? 8.5 : 7.2, isTotal, black, "right");
-    y += isTotal ? 5 : 3.8;
+    y += isTotal ? 6 : 4.2;
   });
   y += 2;
   const letters = wrap(`IMPORTE EN LETRAS: ${importeEnLetras(totales.total, datos.moneda)}`, width - 5, 7.2);
